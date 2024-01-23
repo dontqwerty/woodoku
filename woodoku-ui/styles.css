@@ -1,0 +1,77 @@
+.board-slot-container {
+    position: relative;
+    float: left;
+    width: 11.1%;
+    padding-bottom: 11.1%;
+    background-color: gray;
+}
+
+.board-slot-content {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 90%;
+    height: 90%;
+    border-radius: 10%;
+    margin: 5%;
+    display: -webkit-flex;
+    -webkit-flex-wrap: wrap;
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.board-slot-free {
+    background-color: burlywood;
+}
+
+
+.board-slot-full {
+    background-color: black;
+}
+
+.shape-container {
+    position: relative;
+    float: left;
+    width: 33.3%;
+    padding-bottom: 33.3%;
+}
+
+.shape-content {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 90%;
+    height: 90%;
+    background-color: grey;
+    margin: 5%;
+    display: -webkit-flex;
+    -webkit-flex-wrap: wrap;
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.shape-slot-container {
+    border-radius: 10%;
+    width: 20%;
+    height: 20%;
+    border: 1px solid grey;
+    display: table;
+}
+
+.shape-slot-content {
+    line-height: 100%;
+    font-size: 50px;
+    font-weight: bold;
+    display: table-cell;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.shape-slot-free {
+    background-color: burlywood;
+}
+
+
+.shape-slot-full {
+    background-color: black;
+}

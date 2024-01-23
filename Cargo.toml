@@ -1,0 +1,11 @@
+[workspace]
+members = [
+    "woodoku-ui",
+    "woodoku-lib",
+]
+resolver = "2"
+
+[workspace.dependencies]
+anyhow = "1.0.79"
+log = "0.4.20"
+
