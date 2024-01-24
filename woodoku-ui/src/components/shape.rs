@@ -1,10 +1,10 @@
-use woodoku_lib::Woodoku;
+use woodoku_lib::Shape as LibShape;
 use yew::prelude::*;
 
 #[derive(Properties, PartialEq, Clone)]
 pub struct Props {
     pub shape_ix: usize,
-    pub shape: Option<Vec<bool>>,
+    pub shape: LibShape,
     pub valid: bool,
     pub selected_shape: Option<usize>,
     pub onselect_shape: Callback<usize>,
@@ -26,12 +26,12 @@ pub fn shape(props: &Props) -> Html {
         None
     };
 
-    let (shape, shape_content_class) = if shape.is_none() {
-        (vec![false; Woodoku::SHAPE_SIZE], Some("opacity-25"))
+    let shape_content_class = if !shape.available {
+        Some("opacity-25")
     } else if !valid {
-        (shape.unwrap(), Some("opacity-50"))
+        Some("opacity-50")
     } else {
-        (shape.unwrap(), None)
+        None
     };
 
     let onclick = Callback::from(move |_: MouseEvent| {
@@ -41,7 +41,7 @@ pub fn shape(props: &Props) -> Html {
     html! {
         <div class={classes!("shape-container", shape_container_class)}>
             <div class={classes!("shape-content", shape_content_class)} {onclick}>
-                { shape.into_iter().map(|slot| html!{
+                { shape.data.into_iter().map(|slot| html!{
                     <div class="shape-slot-container">
                         if slot {
                             <div class="shape-slot-content shape-slot-full"></div>

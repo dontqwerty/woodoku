@@ -2,3 +2,5 @@
 **/Cargo.lock
 **/dist/
 **/.vscode
+**/.env/
+**/.github/

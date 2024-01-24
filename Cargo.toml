@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "woodoku-py",
     "woodoku-ui",
     "woodoku-lib",
 ]

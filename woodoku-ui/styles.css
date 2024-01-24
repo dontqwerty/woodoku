@@ -18,6 +18,7 @@
     -webkit-flex-wrap: wrap;
     display: flex;
     flex-wrap: wrap;
+    transition: background-color 0.5s;
 }
 
 .board-slot-free {

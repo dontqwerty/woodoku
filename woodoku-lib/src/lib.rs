@@ -1,10 +1,26 @@
 use anyhow::{anyhow, Ok, Result};
 use rand::seq::SliceRandom;
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
+pub struct Shape {
+    pub data: Vec<bool>,
+    pub available: bool,
+}
+
+impl Shape {
+    fn new(data: Vec<bool>) -> Self {
+        Self {
+            data,
+            available: true,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct Woodoku {
     pub board: Vec<bool>,
-    pub shapes_batch: Vec<Option<Vec<bool>>>,
+    pub shapes_batch: Vec<Shape>,
+    pub game_over: bool,
 }
 
 impl Default for Woodoku {
@@ -14,36 +30,30 @@ impl Default for Woodoku {
 }
 
 impl Woodoku {
-    const BOARD_SIZE: usize = 81;
+    pub const BOARD_SIZE: usize = 81;
     const BOARD_SIDE_SIZE: usize = 9;
     const GRID_SIDE_SIZE: usize = 3;
-    pub const SHAPE_COUNT: usize = 3;
+    pub const SHAPES_BATCH_SIZE: usize = 3;
     pub const SHAPE_SIZE: usize = 25;
     const SHAPE_SIDE_SIZE: usize = 5;
-    const SHAPES_BATCH_SIZE: usize = 3;
-    const MIN_MOVE_DIGITS: usize = 2;
 
     pub fn new() -> Self {
         Self {
             board: vec![false; Self::BOARD_SIZE],
             shapes_batch: Self::get_new_shapes_batch(),
+            game_over: false,
         }
     }
 
-    pub fn play_move_from_str(&self, mv: &str) -> Result<(Self, Vec<bool>)> {
-        let (shape_ix, position) = Self::parse_move(mv)?;
-        self.play_move(shape_ix, position)
-    }
-
-    pub fn play_move(&self, shape_ix: usize, position: usize) -> Result<(Self, Vec<bool>)> {
+    pub fn play_move(&self, shape_ix: usize, position: usize) -> Result<Self> {
         // Get shape from its index
-        let shape: Vec<bool> = self.shapes_batch[shape_ix]
-            .clone()
+        let shape = self
+            .get_shape_if_not_used(shape_ix)
             .ok_or(anyhow!("Invalid move: shape already used"))?;
 
         // Validate move and fill overlapping slots
         let mut board = self.board.clone();
-        Self::apply_move(&mut board, &shape, position)?;
+        Self::apply_move(&mut board, &shape.data, position)?;
 
         // Clear full rows, columns, grids
         Self::clear_indices(&mut board);
@@ -52,61 +62,60 @@ impl Woodoku {
         let mut shapes_batch = self.shapes_batch.clone();
         Self::update_shapes_batch(&mut shapes_batch, shape_ix);
 
-        // Check if there are any moves possible
-        let valid_shapes = Self::get_valid_shapes(&board, &shapes_batch);
+        let game_over = Self::is_game_over(&board, &shapes_batch);
 
-        Ok((
-            Self {
-                board,
-                shapes_batch,
-            },
-            valid_shapes,
-        ))
+        Ok(Self {
+            board,
+            shapes_batch,
+            game_over,
+        })
     }
 
     pub fn move_preview(&self, shape_ix: usize, position: usize) -> Result<Vec<bool>> {
         // Get shape from its index
-        let shape: Vec<bool> = self.shapes_batch[shape_ix]
-            .clone()
+        let shape = self
+            .get_shape_if_not_used(shape_ix)
             .ok_or(anyhow!("Invalid move: shape already used"))?;
 
         // Validate move and fill overlapping slots
         let mut board = self.board.clone();
-        Self::apply_move(&mut board, &shape, position)?;
+        Self::apply_move(&mut board, &shape.data, position)?;
 
         Ok(board)
     }
 
-    fn parse_move(mv: &str) -> Result<(usize, usize)> {
-        if mv.len() < Self::MIN_MOVE_DIGITS {
-            return Err(anyhow!(
-                "Invalid move: a valid move consists of minimum {} digits",
-                Self::MIN_MOVE_DIGITS
-            ));
+    pub fn get_placeable_shapes(board: &[bool], shapes_batch: &[Shape]) -> Vec<bool> {
+        let mut placeable_shapes = vec![];
+        for shape in shapes_batch {
+            let mut shape_can_be_placed = false;
+            if shape.available {
+                for board_ix in 0..Self::BOARD_SIZE {
+                    let mut board = board.to_owned();
+                    if Self::apply_move(&mut board, &shape.data, board_ix).is_ok() {
+                        shape_can_be_placed = true;
+                        break;
+                    }
+                }
+            }
+            placeable_shapes.push(shape_can_be_placed);
         }
+        placeable_shapes
+    }
 
-        let mv_digits = mv
-            .chars()
-            .map(|c| c.to_digit(10).expect("Expected a number as move") as usize)
-            .collect::<Vec<usize>>();
-
-        let shape_ix = mv_digits[0];
-        if shape_ix >= Self::SHAPES_BATCH_SIZE {
-            return Err(anyhow!("Invalid move: shape index out of range"));
-        }
-
-        let mut position = 0;
-        mv_digits[1..]
+    fn is_game_over(board: &[bool], shapes_batch: &[Shape]) -> bool {
+        Self::get_placeable_shapes(board, shapes_batch)
             .iter()
-            .rev()
-            .enumerate()
-            .for_each(|(ix, d)| position += d * 10_usize.pow(ix as u32));
+            .all(|placeable| !placeable)
+    }
 
-        if position >= Self::BOARD_SIZE {
-            return Err(anyhow!("Invalid move: position out of range"));
+    fn get_shape_if_not_used(&self, shape_ix: usize) -> Option<Shape> {
+        let shape = self.shapes_batch[shape_ix].clone();
+
+        if shape.available {
+            Some(shape)
+        } else {
+            None
         }
-
-        Ok((shape_ix, position))
     }
 
     fn apply_move(board: &mut [bool], shape: &[bool], position: usize) -> Result<()> {
@@ -210,41 +219,23 @@ impl Woodoku {
         }
     }
 
-    fn update_shapes_batch(shapes_batch: &mut Vec<Option<Vec<bool>>>, shape_ix: usize) {
-        shapes_batch[shape_ix] = None;
-        if shapes_batch.iter().all(|sb| sb.is_none()) {
+    fn update_shapes_batch(shapes_batch: &mut Vec<Shape>, used_shape_ix: usize) {
+        shapes_batch[used_shape_ix].available = false;
+        if shapes_batch.iter().all(|sb| !sb.available) {
             *shapes_batch = Self::get_new_shapes_batch();
         }
     }
 
-    fn get_new_shapes_batch() -> Vec<Option<Vec<bool>>> {
+    fn get_new_shapes_batch() -> Vec<Shape> {
         Self::get_all_possible_shapes()
             .choose_multiple(&mut rand::thread_rng(), Self::SHAPES_BATCH_SIZE)
-            .map(|shape| Some((*shape).clone()))
-            .collect::<Vec<Option<Vec<bool>>>>()
+            .map(|data| Shape::new((*data).clone()))
+            .collect::<Vec<Shape>>()
     }
 
     fn get_all_possible_shapes() -> Vec<Vec<bool>> {
         let possible_shapes_file = include_str!("data/shapes.json");
         serde_json::from_str(possible_shapes_file).expect("Should read shapes file")
-    }
-
-    fn get_valid_shapes(board: &[bool], shapes_batch: &[Option<Vec<bool>>]) -> Vec<bool> {
-        let mut valid_shapes = vec![];
-        for shape in shapes_batch {
-            let mut shape_can_be_placed = false;
-            if let Some(shape) = shape {
-                for board_ix in 0..Self::BOARD_SIZE {
-                    let mut board = board.to_owned();
-                    if Self::apply_move(&mut board, shape, board_ix).is_ok() {
-                        shape_can_be_placed = true;
-                        break;
-                    }
-                }
-            }
-            valid_shapes.push(shape_can_be_placed);
-        }
-        valid_shapes
     }
 }
 
@@ -261,12 +252,13 @@ mod tests {
         let w = Woodoku::new();
 
         // Assert
+        assert_eq!(all_shapes.len(), 57);
         assert!(w.board.iter().all(|slot| !slot));
-        assert!(w.shapes_batch.iter().all(|shape| shape.is_some()));
+        assert!(w.shapes_batch.iter().all(|shape| shape.available));
         assert!(w
             .shapes_batch
             .iter()
-            .map(|shape| all_shapes.contains(&shape.clone().unwrap()))
+            .map(|shape| all_shapes.contains(&shape.data))
             .collect::<Vec<bool>>()
             .iter()
             .all(|is_contained| *is_contained));
@@ -322,11 +314,23 @@ mod tests {
         for board_ix in 0..Woodoku::BOARD_SIZE {
             let mut mv = String::from("0");
             mv.push_str(&board_ix.to_string());
-            w.shapes_batch = vec![Some(shape_0.clone()), None, None];
+            w.shapes_batch = vec![
+                Shape {
+                    data: shape_0.clone(),
+                    available: true,
+                },
+                Shape {
+                    data: vec![],
+                    available: false,
+                },
+                Shape {
+                    data: vec![],
+                    available: false,
+                },
+            ];
             w = w
-                .play_move_from_str(&mv)
-                .expect(&format!("Move should be valid"))
-                .0;
+                .play_move(0, board_ix)
+                .expect(&format!("Move should be valid"));
 
             if (board_ix + 1) % Woodoku::BOARD_SIDE_SIZE == 0 {
                 // If we are at the end of a row, the board should be empty
@@ -361,21 +365,28 @@ mod tests {
             true, true, false, false, false, true, true, false, false, false, false, false, false,
             false, false, false, false, false, false, false, false, false, false, false, false,
         ];
-        w.shapes_batch = vec![Some(shape_0), Some(shape_1), None];
+        w.shapes_batch = vec![
+            Shape {
+                data: shape_0,
+                available: true,
+            },
+            Shape {
+                data: shape_1,
+                available: true,
+            },
+            Shape {
+                data: vec![],
+                available: false,
+            },
+        ];
 
         // Act, Assert
-        w = w
-            .play_move_from_str("00")
-            .expect(&format!("Move should be valid"))
-            .0;
+        w = w.play_move(0, 0).expect(&format!("Move should be valid"));
         assert!(w.board[0..3].iter().all(|slot| *slot));
         assert!(w.board[9]);
         assert!(w.board[18]);
 
-        w = w
-            .play_move_from_str("110")
-            .expect(&format!("Move should be valid"))
-            .0;
+        w = w.play_move(0, 10).expect(&format!("Move should be valid"));
         assert!(w.board[0..3].iter().all(|slot| !slot));
         assert!(w.board[9..12].iter().all(|slot| !slot));
         assert!(w.board[18..21].iter().all(|slot| !slot));

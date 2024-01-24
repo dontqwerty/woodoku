@@ -34,11 +34,11 @@ pub fn board(props: &Props) -> Html {
     };
 
     html! {
-        <div class={classes!("board-slot-container", opaque)} {onclick} {onmouseover}>
+        <div class="board-slot-container" {onclick} {onmouseover}>
             if slot_state {
-                <div class="board-slot-content board-slot-full"></div>
+                <div class={classes!("board-slot-content", "board-slot-full", opaque)}></div>
             } else {
-                <div class="board-slot-content board-slot-free">{slot_ix}</div>
+                <div class={classes!("board-slot-content", "board-slot-free", opaque)}>{slot_ix}</div>
             }
         </div>
     }
