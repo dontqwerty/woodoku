@@ -1,4 +1,4 @@
-use gloo::{console::console_dbg, dialogs::alert};
+use gloo::dialogs::alert;
 use woodoku_lib::Woodoku;
 use yew::prelude::*;
 
@@ -12,23 +12,39 @@ fn app() -> Html {
     let selected_shape = use_state(Option::default);
     let selected_slot = use_state(Option::default);
     let hovered_slot = use_state(Option::default);
-    let selected_slot_offset = use_state(|| 0);
+    let selected_slot_offset = use_state(usize::default);
     let future_filled_slots = use_state(Vec::new);
+    let future_freed_slots = use_state(Vec::new);
 
     let onreset = Callback::from({
         let woodoku = woodoku.clone();
         let selected_shape = selected_shape.clone();
+        let hovered_slot = hovered_slot.clone();
+        let future_filled_slots = future_filled_slots.clone();
+        let future_freed_slots = future_freed_slots.clone();
         move |_: MouseEvent| {
             woodoku.set(Woodoku::new());
-            selected_shape.set(None);
+            selected_shape.set(Option::default());
+            hovered_slot.set(Option::default());
+            future_filled_slots.set(Vec::new());
+            future_freed_slots.set(Vec::new());
+        }
+    });
+
+    let onleave_board = Callback::from({
+        let hovered_slot = hovered_slot.clone();
+        let future_filled_slots = future_filled_slots.clone();
+        let future_freed_slots = future_freed_slots.clone();
+        move |_: ()| {
+            hovered_slot.set(Option::default());
+            future_filled_slots.set(Vec::new());
+            future_freed_slots.set(Vec::new());
         }
     });
 
     let onhover_slot = Callback::from({
         let hovered_slot = hovered_slot.clone();
-        move |slot_ix: usize| {
-            hovered_slot.set(Some(slot_ix));
-        }
+        move |slot_ix: usize| hovered_slot.set(Some(slot_ix))
     });
 
     let onselect_slot = Callback::from({
@@ -55,14 +71,15 @@ fn app() -> Html {
         let selected_shape = selected_shape.clone();
         let selected_slot_offset = selected_slot_offset.clone();
         let future_filled_slots = future_filled_slots.clone();
+        let future_freed_slots = future_freed_slots.clone();
         move |_| {
-            console_dbg!((*woodoku).clone());
             App::play_move(
                 woodoku,
                 selected_shape,
                 selected_slot,
                 selected_slot_offset,
                 future_filled_slots,
+                future_freed_slots,
             );
         }
     });
@@ -72,6 +89,7 @@ fn app() -> Html {
         let selected_shape = selected_shape.clone();
         let selected_slot_offset = selected_slot_offset.clone();
         let future_filled_slots = future_filled_slots.clone();
+        let future_freed_slots = future_freed_slots.clone();
         move |_| {
             App::move_preview(
                 woodoku,
@@ -79,7 +97,8 @@ fn app() -> Html {
                 hovered_slot,
                 selected_slot_offset,
                 future_filled_slots,
-            )
+                future_freed_slots,
+            );
         }
     });
 
@@ -94,8 +113,11 @@ fn app() -> Html {
             <div class="container m-1">
                 <div class="row">
                     <div class={classes!("col-md-8", board_container_class)}>
-                        <Board board={(*woodoku).clone().board}
+                        <Board
+                            board={(*woodoku).board.clone()}
                             future_filled_slots={(*future_filled_slots).clone()}
+                            future_freed_slots={(*future_freed_slots).clone()}
+                            {onleave_board}
                             {onselect_slot}
                             {onhover_slot}
                         />
@@ -103,7 +125,8 @@ fn app() -> Html {
                     <div class="col-md-4">
                         <div class="row">
                             <div class="col-md-12">
-                                <Shapes shapes={(*woodoku).clone().shapes_batch}
+                                <Shapes
+                                    shapes={(*woodoku).clone().shapes_batch}
                                     placeable_shapes={Woodoku::get_placeable_shapes(&woodoku.board, &woodoku.shapes_batch)}
                                     selected_shape={*selected_shape}
                                     {onselect_shape}
@@ -129,6 +152,7 @@ impl App {
         target_slot: UseStateHandle<Option<usize>>,
         slot_offset: UseStateHandle<usize>,
         future_filled_slots: UseStateHandle<Vec<usize>>,
+        future_freed_slots: UseStateHandle<Vec<usize>>,
     ) {
         if let (Some(shape), Some(slot)) = (*target_shape, *target_slot) {
             match woodoku.play_move(shape, slot.saturating_sub(*slot_offset)) {
@@ -141,6 +165,7 @@ impl App {
         }
         target_slot.set(None);
         future_filled_slots.set(Vec::new());
+        future_freed_slots.set(Vec::new());
     }
 
     fn move_preview(
@@ -149,6 +174,7 @@ impl App {
         target_slot: UseStateHandle<Option<usize>>,
         slot_offset: UseStateHandle<usize>,
         future_filled_slots: UseStateHandle<Vec<usize>>,
+        future_freed_slots: UseStateHandle<Vec<usize>>,
     ) {
         if let (Some(shape), Some(slot)) = (*target_shape, *target_slot) {
             match woodoku.move_preview(shape, slot.saturating_sub(*slot_offset)) {
@@ -157,16 +183,19 @@ impl App {
                         woodoku
                             .board
                             .iter()
-                            .zip(new_board)
+                            .zip(new_board.clone())
                             .enumerate()
                             .map(|(slot_ix, (old_slot, new_slot))| (slot_ix, old_slot ^ new_slot))
                             .filter(|(_, ff)| *ff)
                             .map(|(slot_ix, _)| slot_ix)
-                            .collect::<Vec<usize>>(),
+                            .collect(),
                     );
+                    future_freed_slots
+                        .set(Woodoku::get_indices_to_clear_with_duplicates(&new_board));
                 }
                 Err(_) => {
                     future_filled_slots.set(vec![]);
+                    future_freed_slots.set(vec![]);
                 }
             }
         }
@@ -187,8 +216,12 @@ impl App {
                 .find(|(_, shape_slot)| **shape_slot)
                 .expect("Excpecting at least one full slot in each shape");
             slot_offset.set(shape_offset);
+            target_shape.set(if *target_shape == Some(shape_ix) {
+                None
+            } else {
+                Some(shape_ix)
+            })
         }
-        target_shape.set(Some(shape_ix))
     }
 }
 

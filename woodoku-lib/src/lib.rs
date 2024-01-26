@@ -102,10 +102,12 @@ impl Woodoku {
         placeable_shapes
     }
 
-    fn is_game_over(board: &[bool], shapes_batch: &[Shape]) -> bool {
-        Self::get_placeable_shapes(board, shapes_batch)
-            .iter()
-            .all(|placeable| !placeable)
+    pub fn get_indices_to_clear_with_duplicates(board: &[bool]) -> Vec<usize> {
+        let mut indices_to_clear = vec![];
+        Self::get_rows_indices_to_clear(board, &mut indices_to_clear);
+        Self::get_columns_indices_to_clear(board, &mut indices_to_clear);
+        Self::get_grids_indices_to_clear(board, &mut indices_to_clear);
+        indices_to_clear
     }
 
     fn get_shape_if_not_used(&self, shape_ix: usize) -> Option<Shape> {
@@ -118,8 +120,29 @@ impl Woodoku {
         }
     }
 
+    fn is_game_over(board: &[bool], shapes_batch: &[Shape]) -> bool {
+        Self::get_placeable_shapes(board, shapes_batch)
+            .iter()
+            .all(|placeable| !placeable)
+    }
+
     fn apply_move(board: &mut [bool], shape: &[bool], position: usize) -> Result<()> {
         // Calculate which board slots are impacted by overlapping the shape
+        let board_indices = Self::get_impacted_board_indices(shape, position)?;
+
+        // Update board: fill slots
+        for board_ix in board_indices {
+            if board[board_ix] {
+                return Err(anyhow!("Invalid move: shape overlapping"));
+            } else {
+                board[board_ix] = true;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn get_impacted_board_indices(shape: &[bool], position: usize) -> Result<Vec<usize>> {
         let mut board_indices = vec![];
         for shape_row in 0..Self::SHAPE_SIDE_SIZE {
             for shape_col in 0..Self::SHAPE_SIDE_SIZE {
@@ -149,17 +172,7 @@ impl Woodoku {
                 }
             }
         }
-
-        // Update board: fill slots
-        for board_ix in board_indices {
-            if board[board_ix] {
-                return Err(anyhow!("Invalid move: shape overlapping"));
-            } else {
-                board[board_ix] = true;
-            }
-        }
-
-        Ok(())
+        Ok(board_indices)
     }
 
     fn clear_indices(board: &mut [bool]) {
@@ -167,14 +180,6 @@ impl Woodoku {
         for ix_to_clear in indices_to_clear {
             board[ix_to_clear] = false;
         }
-    }
-
-    fn get_indices_to_clear_with_duplicates(board: &[bool]) -> Vec<usize> {
-        let mut indices_to_clear = vec![];
-        Self::get_rows_indices_to_clear(board, &mut indices_to_clear);
-        Self::get_columns_indices_to_clear(board, &mut indices_to_clear);
-        Self::get_grids_indices_to_clear(board, &mut indices_to_clear);
-        indices_to_clear
     }
 
     fn get_rows_indices_to_clear(board: &[bool], indices_to_clear: &mut Vec<usize>) {
@@ -200,21 +205,29 @@ impl Woodoku {
         }
     }
 
-    fn get_grids_indices_to_clear(board: &[bool], indices_to_clear: &mut Vec<usize>) {
+    pub fn get_grid_indices() -> Vec<Vec<usize>> {
+        let mut grids_indices = vec![];
         for grid_ix_0 in 0..Self::GRID_SIDE_SIZE {
             let q1 = grid_ix_0 * Self::BOARD_SIDE_SIZE * Self::GRID_SIDE_SIZE;
             for grid_ix_1 in 0..Self::GRID_SIDE_SIZE {
                 let q2 = grid_ix_1 * Self::GRID_SIDE_SIZE;
-                let mut board_indices = vec![];
+                let mut grid_indices = vec![];
                 for grid_row in 0..Self::GRID_SIDE_SIZE {
                     let q3 = grid_row * Self::BOARD_SIDE_SIZE;
                     for grid_col in 0..Self::GRID_SIDE_SIZE {
-                        board_indices.push(q1 + q2 + q3 + grid_col);
+                        grid_indices.push(q1 + q2 + q3 + grid_col);
                     }
                 }
-                if board_indices.iter().all(|board_ix| board[*board_ix]) {
-                    indices_to_clear.extend(board_indices);
-                }
+                grids_indices.push(grid_indices)
+            }
+        }
+        grids_indices
+    }
+
+    fn get_grids_indices_to_clear(board: &[bool], indices_to_clear: &mut Vec<usize>) {
+        for grid_indices in Self::get_grid_indices() {
+            if grid_indices.iter().all(|board_ix| board[*board_ix]) {
+                indices_to_clear.extend(grid_indices);
             }
         }
     }
@@ -354,7 +367,7 @@ mod tests {
     }
 
     #[test]
-    fn fn_apply_move_internal_should_succeed_fill_grid_with_two_shapes() {
+    fn fn_play_move_should_succeed_fill_grid_with_two_shapes() {
         // Arrange
         let mut w = Woodoku::new();
         let shape_0 = vec![
@@ -386,9 +399,56 @@ mod tests {
         assert!(w.board[9]);
         assert!(w.board[18]);
 
-        w = w.play_move(0, 10).expect(&format!("Move should be valid"));
+        w = w.play_move(1, 10).expect(&format!("Move should be valid"));
         assert!(w.board[0..3].iter().all(|slot| !slot));
         assert!(w.board[9..12].iter().all(|slot| !slot));
         assert!(w.board[18..21].iter().all(|slot| !slot));
+    }
+
+    #[test]
+    fn fn_play_move_should_game_over() {
+        // Arrange
+        let mut w = Woodoku::new();
+        let shape_0 = vec![
+            true, true, true, false, false, true, false, false, false, false, true, false, false,
+            false, false, false, false, false, false, false, false, false, false, false, false,
+        ];
+
+        w.board = vec![false; Woodoku::BOARD_SIZE];
+        // Place a block on every secondo index on the board
+        for board_ix in 0..Woodoku::BOARD_SIZE {
+            if board_ix % 2 == 0 {
+                w.board[board_ix] = true;
+            }
+        }
+        // Free the blocks needed to place the shape in pos 0
+        for ix in Woodoku::get_impacted_board_indices(&shape_0, 0).unwrap() {
+            w.board[ix] = false;
+        }
+        // Free the blocks needed to place the shape in pos 49
+        for ix in Woodoku::get_impacted_board_indices(&shape_0, 49).unwrap() {
+            w.board[ix] = false;
+        }
+
+        w.shapes_batch = vec![
+            Shape {
+                data: shape_0.clone(),
+                available: true,
+            },
+            Shape {
+                data: shape_0.clone(),
+                available: true,
+            },
+            Shape {
+                data: shape_0,
+                available: true,
+            },
+        ];
+
+        // Act, Assert
+        w = w.play_move(0, 0).expect(&format!("Move should be valid"));
+        assert!(!w.game_over);
+        w = w.play_move(1, 49).expect(&format!("Move should be valid"));
+        assert!(w.game_over);
     }
 }

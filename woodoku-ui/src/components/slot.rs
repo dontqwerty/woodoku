@@ -3,8 +3,7 @@ use yew::prelude::*;
 #[derive(Properties, PartialEq, Clone)]
 pub struct Props {
     pub slot_ix: usize,
-    pub slot_state: bool,
-    pub future_filled: bool,
+    pub slot_class: String,
     pub onselect_slot: Callback<usize>,
     pub onhover_slot: Callback<usize>,
 }
@@ -13,8 +12,7 @@ pub struct Props {
 pub fn board(props: &Props) -> Html {
     let Props {
         slot_ix,
-        slot_state,
-        future_filled,
+        slot_class,
         onselect_slot,
         onhover_slot,
     } = (*props).clone();
@@ -27,19 +25,9 @@ pub fn board(props: &Props) -> Html {
         onhover_slot.emit(slot_ix);
     });
 
-    let opaque = if future_filled {
-        Some("opacity-50")
-    } else {
-        None
-    };
-
     html! {
         <div class="board-slot-container" {onclick} {onmouseover}>
-            if slot_state {
-                <div class={classes!("board-slot-content", "board-slot-full", opaque)}></div>
-            } else {
-                <div class={classes!("board-slot-content", "board-slot-free", opaque)}>{slot_ix}</div>
-            }
+            <div class={classes!("board-slot-content", slot_class)}></div>
         </div>
     }
 }

@@ -3,7 +3,7 @@
     float: left;
     width: 11.1%;
     padding-bottom: 11.1%;
-    background-color: gray;
+    background-color: white;
 }
 
 .board-slot-content {
@@ -18,16 +18,23 @@
     -webkit-flex-wrap: wrap;
     display: flex;
     flex-wrap: wrap;
-    transition: background-color 0.5s;
+    transition: background-color 0.1s;
 }
 
-.board-slot-free {
+.board-slot-content.now-free-light {
     background-color: burlywood;
 }
 
+.board-slot-content.now-free-dark {
+    background-color: rgb(156, 130, 95);
+}
 
-.board-slot-full {
-    background-color: black;
+.board-slot-content.future-filled {
+    background-color: rgba(65, 65, 65, 0.568);
+}
+
+.board-slot-content.future-free {
+    background-color: rgb(255, 217, 0);
 }
 
 .shape-container {
@@ -43,7 +50,7 @@
     top: 0;
     width: 90%;
     height: 90%;
-    background-color: grey;
+    background-color: white;
     margin: 5%;
     display: -webkit-flex;
     -webkit-flex-wrap: wrap;
@@ -55,7 +62,7 @@
     border-radius: 10%;
     width: 20%;
     height: 20%;
-    border: 1px solid grey;
+    border: 1px solid white;
     display: table;
 }
 
