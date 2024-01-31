@@ -113,7 +113,7 @@ fn app() -> Html {
             <div class="container m-1">
                 <div class="row">
                     <div class="col-md-8">
-                        <h1 class="text-center">{"Score: 1170"}</h1>
+                        <h1 class="text-center">{woodoku.score}</h1>
                     </div>
                 </div>
                 <div class="row">

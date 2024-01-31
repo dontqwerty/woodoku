@@ -14,13 +14,19 @@ impl Shape {
             to_be_placed: true,
         }
     }
+
+    fn size(&self) -> usize {
+        self.data.iter().filter(|slot| **slot).count()
+    }
 }
 
 #[derive(Clone, Debug)]
 pub struct Woodoku {
+    pub score: usize,
     pub board: Vec<bool>,
     pub shapes_batch: Vec<Shape>,
     pub game_over: bool,
+    clear_streak: usize,
 }
 
 impl Default for Woodoku {
@@ -39,9 +45,11 @@ impl Woodoku {
 
     pub fn new() -> Self {
         Self {
+            score: 0,
             board: vec![false; Self::BOARD_SIZE],
             shapes_batch: Self::get_new_shapes_batch(),
             game_over: false,
+            clear_streak: 0,
         }
     }
 
@@ -56,7 +64,10 @@ impl Woodoku {
         Self::apply_move(&mut board, &shape.data, position)?;
 
         // Clear full rows, columns, grids
-        Self::clear_indices(&mut board);
+        let number_of_cleared_sets = Self::clear_indices(&mut board);
+
+        // Update score
+        let (clear_streak, score) = self.update_score(number_of_cleared_sets, shape_ix);
 
         // Update shapes batch
         let mut shapes_batch = self.shapes_batch.clone();
@@ -65,9 +76,11 @@ impl Woodoku {
         let game_over = Self::is_game_over(&board, &shapes_batch);
 
         Ok(Self {
+            score,
             board,
             shapes_batch,
             game_over,
+            clear_streak,
         })
     }
 
@@ -118,6 +131,28 @@ impl Woodoku {
         } else {
             None
         }
+    }
+
+    // A "size" bonus equivalent to the number of filled slots of the moved shape
+    // is added to the score
+    // A "clear" bonus of 18 points is added to the score for each cleared set
+    // A "combo" bonus of [10 * (NUMBER_OF_CLEARED_SETS - 1)] is added to the score
+    // A "streak" bonus of
+    // [10 * (NUMBER_OF_CONSECUTIVE_MOVES_THAT_CLEARED_AT_LEAST_ONE_SET_BEFORE_THE_CURRENT_MOVE - 1)]
+    // is added to the score
+    fn update_score(&self, number_of_cleared_sets: usize, shape_ix: usize) -> (usize, usize) {
+        let clear_streak = if number_of_cleared_sets > 0 {
+            self.clear_streak + 1
+        } else {
+            0
+        };
+        let size_bonus = self.shapes_batch[shape_ix].size();
+        let clear_bonus = 18 * number_of_cleared_sets;
+        let combo_bonus = 10 * number_of_cleared_sets.saturating_sub(1);
+        let streak_bonus = 10 * clear_streak.saturating_sub(1);
+
+        let score = self.score + size_bonus + clear_bonus + combo_bonus + streak_bonus;
+        (clear_streak, score)
     }
 
     fn is_game_over(board: &[bool], shapes_batch: &[Shape]) -> bool {
@@ -175,11 +210,10 @@ impl Woodoku {
         Ok(board_indices)
     }
 
-    fn clear_indices(board: &mut [bool]) {
+    fn clear_indices(board: &mut [bool]) -> usize {
         let indices_to_clear = Self::get_indices_to_clear_with_duplicates(board);
-        for ix_to_clear in indices_to_clear {
-            board[ix_to_clear] = false;
-        }
+        indices_to_clear.iter().for_each(|ix| board[*ix] = false);
+        indices_to_clear.len() / Self::BOARD_SIDE_SIZE
     }
 
     fn get_rows_indices_to_clear(board: &[bool], indices_to_clear: &mut Vec<usize>) {
