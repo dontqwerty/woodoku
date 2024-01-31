@@ -4,14 +4,14 @@ use rand::seq::SliceRandom;
 #[derive(Clone, Debug, PartialEq)]
 pub struct Shape {
     pub data: Vec<bool>,
-    pub available: bool,
+    pub to_be_placed: bool,
 }
 
 impl Shape {
     fn new(data: Vec<bool>) -> Self {
         Self {
             data,
-            available: true,
+            to_be_placed: true,
         }
     }
 }
@@ -88,7 +88,7 @@ impl Woodoku {
         let mut placeable_shapes = vec![];
         for shape in shapes_batch {
             let mut shape_can_be_placed = false;
-            if shape.available {
+            if shape.to_be_placed {
                 for board_ix in 0..Self::BOARD_SIZE {
                     let mut board = board.to_owned();
                     if Self::apply_move(&mut board, &shape.data, board_ix).is_ok() {
@@ -113,7 +113,7 @@ impl Woodoku {
     fn get_shape_if_not_used(&self, shape_ix: usize) -> Option<Shape> {
         let shape = self.shapes_batch[shape_ix].clone();
 
-        if shape.available {
+        if shape.to_be_placed {
             Some(shape)
         } else {
             None
@@ -233,8 +233,8 @@ impl Woodoku {
     }
 
     fn update_shapes_batch(shapes_batch: &mut Vec<Shape>, used_shape_ix: usize) {
-        shapes_batch[used_shape_ix].available = false;
-        if shapes_batch.iter().all(|sb| !sb.available) {
+        shapes_batch[used_shape_ix].to_be_placed = false;
+        if shapes_batch.iter().all(|sb| !sb.to_be_placed) {
             *shapes_batch = Self::get_new_shapes_batch();
         }
     }
@@ -267,7 +267,7 @@ mod tests {
         // Assert
         assert_eq!(all_shapes.len(), 57);
         assert!(w.board.iter().all(|slot| !slot));
-        assert!(w.shapes_batch.iter().all(|shape| shape.available));
+        assert!(w.shapes_batch.iter().all(|shape| shape.to_be_placed));
         assert!(w
             .shapes_batch
             .iter()
@@ -330,15 +330,15 @@ mod tests {
             w.shapes_batch = vec![
                 Shape {
                     data: shape_0.clone(),
-                    available: true,
+                    to_be_placed: true,
                 },
                 Shape {
                     data: vec![],
-                    available: false,
+                    to_be_placed: false,
                 },
                 Shape {
                     data: vec![],
-                    available: false,
+                    to_be_placed: false,
                 },
             ];
             w = w
@@ -381,15 +381,15 @@ mod tests {
         w.shapes_batch = vec![
             Shape {
                 data: shape_0,
-                available: true,
+                to_be_placed: true,
             },
             Shape {
                 data: shape_1,
-                available: true,
+                to_be_placed: true,
             },
             Shape {
                 data: vec![],
-                available: false,
+                to_be_placed: false,
             },
         ];
 
@@ -433,15 +433,15 @@ mod tests {
         w.shapes_batch = vec![
             Shape {
                 data: shape_0.clone(),
-                available: true,
+                to_be_placed: true,
             },
             Shape {
                 data: shape_0.clone(),
-                available: true,
+                to_be_placed: true,
             },
             Shape {
                 data: shape_0,
-                available: true,
+                to_be_placed: true,
             },
         ];
 

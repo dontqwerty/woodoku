@@ -1,11 +1,11 @@
-use woodoku_lib::Shape as LibShape;
 use yew::prelude::*;
 
 #[derive(Properties, PartialEq, Clone)]
 pub struct Props {
     pub shape_ix: usize,
-    pub shape: LibShape,
-    pub valid: bool,
+    pub data: Vec<bool>,
+    pub to_be_placed: bool,
+    pub placeable: bool,
     pub selected_shape: Option<usize>,
     pub onselect_shape: Callback<usize>,
 }
@@ -14,8 +14,9 @@ pub struct Props {
 pub fn shape(props: &Props) -> Html {
     let Props {
         shape_ix,
-        shape,
-        valid,
+        data,
+        to_be_placed,
+        placeable,
         selected_shape,
         onselect_shape,
     } = (*props).clone();
@@ -26,22 +27,26 @@ pub fn shape(props: &Props) -> Html {
         None
     };
 
-    let shape_content_class = if !shape.available {
+    let shape_content_class = if !to_be_placed {
+        Some("opacity-0")
+    } else if !placeable {
         Some("opacity-25")
-    } else if !valid {
-        Some("opacity-50")
     } else {
         None
     };
 
-    let onclick = Callback::from(move |_: MouseEvent| {
-        onselect_shape.emit(shape_ix);
-    });
+    let onclick = if to_be_placed && placeable {
+        Some(Callback::from(move |_: MouseEvent| {
+            onselect_shape.emit(shape_ix)
+        }))
+    } else {
+        None
+    };
 
     html! {
         <div class={classes!("shape-container", shape_container_class)}>
             <div class={classes!("shape-content", shape_content_class)} {onclick}>
-                { shape.data.into_iter().map(|slot| html!{
+                { data.into_iter().map(|slot| html!{
                     <div class="shape-slot-container">
                         if slot {
                             <div class="shape-slot-content shape-slot-full"></div>

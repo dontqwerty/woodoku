@@ -1,11 +1,11 @@
-use woodoku_lib::Shape as LibShape;
+use woodoku_lib::Shape as ShapeLib;
 use yew::prelude::*;
 
 use crate::components::shape::Shape;
 
 #[derive(Properties, PartialEq, Clone)]
 pub struct Props {
-    pub shapes: Vec<LibShape>,
+    pub shapes: Vec<ShapeLib>,
     pub placeable_shapes: Vec<bool>,
     pub selected_shape: Option<usize>,
     pub onselect_shape: Callback<usize>,
@@ -22,8 +22,14 @@ pub fn shapes(props: &Props) -> Html {
 
     html! {
         <div class="shapes-container p-3">
-            { shapes.into_iter().zip(placeable_shapes).enumerate().map(|(shape_ix, (shape, valid))| html!{
-                <Shape {shape_ix} {shape} {valid} {selected_shape} onselect_shape={onselect_shape.clone()}/>
+            { shapes.into_iter().zip(placeable_shapes).enumerate().map(|(shape_ix, (shape, placeable))| html!{
+                <Shape
+                    {shape_ix}
+                    data={shape.data}
+                    to_be_placed={shape.to_be_placed}
+                    {placeable}
+                    {selected_shape}
+                    onselect_shape={onselect_shape.clone()} />
             }).collect::<Vec<Html>>() }
         </div>
     }

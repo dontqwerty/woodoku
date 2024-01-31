@@ -112,6 +112,11 @@ fn app() -> Html {
         <div class="d-flex justify-content-center">
             <div class="container m-1">
                 <div class="row">
+                    <div class="col-md-8">
+                        <h1 class="text-center">{"Score: 1170"}</h1>
+                    </div>
+                </div>
+                <div class="row">
                     <div class={classes!("col-md-8", board_container_class)}>
                         <Board
                             board={(*woodoku).board.clone()}
@@ -208,7 +213,7 @@ impl App {
         slot_offset: UseStateHandle<usize>,
     ) {
         let shape = woodoku.shapes_batch[shape_ix].clone();
-        if shape.available {
+        if shape.to_be_placed {
             let (shape_offset, _) = shape
                 .data
                 .iter()
