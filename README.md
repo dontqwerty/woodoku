@@ -23,6 +23,6 @@ If none of the availables shapes can be placed on the board, the game ends.
 
 ### Shapes
 
-Here an image showing all the shapes defined in ![woodoku-lib/src/data/shapes.json](woodoku-lib/src/data/shapes.json) grouped by their size.
+Here an image showing all the shapes defined in [woodoku-lib/src/data/shapes.json](woodoku-lib/src/data/shapes.json) grouped by their size.
 
 ![Alt text](images/shapes.png?raw=true "Shapes")
