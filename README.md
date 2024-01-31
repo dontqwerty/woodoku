@@ -3,7 +3,7 @@ For now, a Rust implementation of the brain puzzle game Woodoku... soon an AI Wo
 
 ## The game
 
-![Alt text](images/game.png?raw=true "The ")
+![Alt text](images/game.gif?raw=true "The ")
 
 The player is presented with a 9x9 board in which to place one of the 3 possible shapes on the side.
 
