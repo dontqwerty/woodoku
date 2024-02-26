@@ -65,7 +65,6 @@ class WoodokuEnv(py_environment.PyEnvironment):
             return self.reset()
 
         original_action = self.cross_product_actions[action]
-        # print(original_action)
         reward = 1
         try:
             self.w = self.w.play_move(original_action[1], original_action[0])

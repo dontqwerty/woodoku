@@ -13,18 +13,18 @@ import matplotlib.pyplot as plt
 import reverb
 import tensorflow as tf
 
-num_iterations = 20_000
+num_iterations = 500_000 # @param {type:"integer"}
 
-initial_collect_steps = 100
-collect_steps_per_iteration = 10
-replay_buffer_max_length = 100_000
+initial_collect_steps = 10_000  # @param {type:"integer"}
+collect_steps_per_iteration = 100 # @param {type:"integer"}
+replay_buffer_max_length = 100_000  # @param {type:"integer"}
 
-batch_size = 64
-learning_rate = 1e-3
-log_interval = 200
+batch_size = 64  # @param {type:"integer"}
+learning_rate = 1e-3  # @param {type:"number"}
+log_interval = 200  # @param {type:"integer"}
 
-num_eval_episodes = 100
-eval_interval = 1000
+num_eval_episodes = 10  # @param {type:"integer"}
+eval_interval = 1_000  # @param {type:"integer"}
 
 env = environment.WoodokuEnv()
 env.reset()
@@ -37,7 +37,7 @@ train_env = tf_py_environment.TFPyEnvironment(train_py_env)
 eval_env = tf_py_environment.TFPyEnvironment(eval_py_env)
 
 
-fc_layer_params = (1000, 100)
+fc_layer_params = (500, 300)
 action_tensor_spec = tensor_spec.from_spec(env.action_spec())
 num_actions = action_tensor_spec.maximum - action_tensor_spec.minimum + 1
 
@@ -56,7 +56,7 @@ dense_layers = [dense_layer(num_units) for num_units in fc_layer_params]
 q_values_layer = tf.keras.layers.Dense(
     num_actions,
     activation=None,
-    kernel_initializer=tf.keras.initializers.RandomUniform(minval=0, maxval=1),
+    kernel_initializer=tf.keras.initializers.RandomUniform(minval=-0.03, maxval=0.03),
     bias_initializer=tf.keras.initializers.Constant(-0.2),
 )
 q_net = sequential.Sequential(dense_layers + [q_values_layer])
