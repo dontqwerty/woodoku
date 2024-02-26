@@ -26,11 +26,15 @@ impl WoodokuPy {
             .shapes_batch
             .iter()
             .map(|shape| {
-                shape
-                    .data
-                    .iter()
-                    .map(|data| if *data { 1 } else { 0 })
-                    .collect()
+                if shape.to_be_placed {
+                    shape
+                        .data
+                        .iter()
+                        .map(|data| if *data { 1 } else { 0 })
+                        .collect()
+                } else {
+                    vec![0; self.shape_size()]
+                }
             })
             .collect()
     }

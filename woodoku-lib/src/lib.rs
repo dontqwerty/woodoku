@@ -268,7 +268,7 @@ impl Woodoku {
 
     fn update_shapes_batch(shapes_batch: &mut Vec<Shape>, used_shape_ix: usize) {
         shapes_batch[used_shape_ix].to_be_placed = false;
-        if shapes_batch.iter().all(|sb| !sb.to_be_placed) {
+        if shapes_batch.iter().all(|shape| !shape.to_be_placed) {
             *shapes_batch = Self::get_new_shapes_batch();
         }
     }
@@ -377,7 +377,7 @@ mod tests {
             ];
             w = w
                 .play_move(0, board_ix)
-                .expect(&format!("Move should be valid"));
+                .expect("Move should be valid");
 
             if (board_ix + 1) % Woodoku::BOARD_SIDE_SIZE == 0 {
                 // If we are at the end of a row, the board should be empty
