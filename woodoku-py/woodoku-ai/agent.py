@@ -13,10 +13,10 @@ import matplotlib.pyplot as plt
 import reverb
 import tensorflow as tf
 
-num_iterations = 500_000 # @param {type:"integer"}
+num_iterations = 2000 # @param {type:"integer"}
 
-initial_collect_steps = 10_000  # @param {type:"integer"}
-collect_steps_per_iteration = 100 # @param {type:"integer"}
+initial_collect_steps = 100  # @param {type:"integer"}
+collect_steps_per_iteration = 10 # @param {type:"integer"}
 replay_buffer_max_length = 100_000  # @param {type:"integer"}
 
 batch_size = 64  # @param {type:"integer"}
@@ -37,7 +37,7 @@ train_env = tf_py_environment.TFPyEnvironment(train_py_env)
 eval_env = tf_py_environment.TFPyEnvironment(eval_py_env)
 
 
-fc_layer_params = (500, 300)
+fc_layer_params = (100, 50)
 action_tensor_spec = tensor_spec.from_spec(env.action_spec())
 num_actions = action_tensor_spec.maximum - action_tensor_spec.minimum + 1
 

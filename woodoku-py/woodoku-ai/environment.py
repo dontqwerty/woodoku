@@ -1,5 +1,4 @@
 import os
-from itertools import product
 
 import numpy as np
 
@@ -14,15 +13,23 @@ import woodoku_py
 os.environ["TF_USE_LEGACY_KERAS"] = "1"
 
 
+def number_to_base_with_resulting_digits(n, b, d):
+    if n == 0:
+        return [0] * d
+    digits = []
+    while n:
+        digits.append(int(n % b))
+        n //= b
+    digits = digits[::-1]
+    digits = [0] * (d - len(digits)) + digits
+    return digits
+
+
 class WoodokuEnv(py_environment.PyEnvironment):
     def __init__(self):
         self.w = woodoku_py.WoodokuPy()
 
-        multi_dimensional_action_space = [
-            [i for i in range(0, self.w.board_size)],
-            [i for i in range(0, self.w.shapes_batch_size)],
-        ]
-        self.cross_product_actions = list(product(*multi_dimensional_action_space))
+        self.counter = 0
 
         board_size = self.w.board_size
         shapes_batch_size = self.w.shapes_batch_size
@@ -32,7 +39,7 @@ class WoodokuEnv(py_environment.PyEnvironment):
             shape=(),
             dtype=np.int32,
             minimum=0,
-            maximum=len(self.cross_product_actions) - 1,
+            maximum=(board_size**shapes_batch_size) - 1,
         )
         self._observation_spec = array_spec.BoundedArraySpec(
             shape=(board_size + shapes_batch_size * shape_size,),
@@ -53,24 +60,38 @@ class WoodokuEnv(py_environment.PyEnvironment):
 
     def _reset(self):
         self.w = woodoku_py.WoodokuPy()
+        self.counter = 0
         self._state = self.get_state()
         self._episode_ended = False
         self._current_time_step = None
         return ts.restart(self._state)
 
     def _step(self, action):
+        self.counter += 1
         if self._episode_ended:
             # The last action ended the episode. Ignore the current action and start
             # a new episode.
             return self.reset()
 
-        original_action = self.cross_product_actions[action]
-        reward = 1
-        try:
-            self.w = self.w.play_move(original_action[1], original_action[0])
-        except Exception:
-            self._episode_ended = True
-            reward = -10
+        original_action = action.copy()
+        decoded_action = number_to_base_with_resulting_digits(
+            action, self.w.board_size, self.w.shapes_batch_size
+        )
+        print(f"{self.counter}: {original_action} -> {decoded_action}")
+        reward = 0
+        
+        new_w = self.w
+        exception_encountered = False
+        for i in range(self.w.shapes_batch_size):
+            try:
+                new_w = new_w.play_move(i, decoded_action[i])
+                reward += 1
+            except Exception as e:
+                print(f"{i}: {e}")
+                exception_encountered = True
+                reward -= 1
+        if not exception_encountered:
+            self.w = new_w
 
         if self.w.game_over:
             self._episode_ended = True
