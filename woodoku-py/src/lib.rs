@@ -21,22 +21,13 @@ impl WoodokuPy {
     }
 
     #[getter]
-    fn shapes_batch(&self) -> Vec<Vec<usize>> {
-        self.0
-            .shapes_batch
-            .iter()
-            .map(|shape| {
-                if shape.to_be_placed {
-                    shape
-                        .data
-                        .iter()
-                        .map(|data| if *data { 1 } else { 0 })
-                        .collect()
-                } else {
-                    vec![0; self.shape_size()]
-                }
-            })
-            .collect()
+    fn shapes_count(&self) -> usize {
+        Woodoku::get_shapes_count()
+    }
+
+    #[getter]
+    fn shapes_batch(&self) -> Vec<usize> {
+        self.0.shapes_batch.iter().map(|shape| shape.id).collect()
     }
 
     #[getter]

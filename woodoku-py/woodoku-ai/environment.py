@@ -32,6 +32,7 @@ class WoodokuEnv(py_environment.PyEnvironment):
         self.counter = 0
 
         board_size = self.w.board_size
+        shapes_count = self.w.shapes_count
         shapes_batch_size = self.w.shapes_batch_size
         shape_size = self.w.shape_size
 
@@ -42,10 +43,10 @@ class WoodokuEnv(py_environment.PyEnvironment):
             maximum=(board_size**shapes_batch_size) - 1,
         )
         self._observation_spec = array_spec.BoundedArraySpec(
-            shape=(board_size + shapes_batch_size * shape_size,),
+            shape=(3 + shapes_batch_size,),
             dtype=np.int32,
             minimum=0,
-            maximum=1,
+            maximum=[2**27] * 3 + [shapes_count - 1] * shapes_batch_size,
         )
 
         self._state = self.get_state()
@@ -79,7 +80,7 @@ class WoodokuEnv(py_environment.PyEnvironment):
         )
         print(f"{self.counter}: {original_action} -> {decoded_action}")
         reward = 0
-        
+
         new_w = self.w
         exception_encountered = False
         for i in range(self.w.shapes_batch_size):
@@ -104,9 +105,25 @@ class WoodokuEnv(py_environment.PyEnvironment):
             return ts.transition(self._state, reward=reward, discount=1.0)
 
     def get_state(self):
-        state = self.w.board
-        # sum is used to flatten `shapes_batch`
-        state.extend(sum(self.w.shapes_batch, []))
+        # state = self.w.board
+        # # sum is used to flatten `shapes_batch`
+        # state.extend(sum(self.w.shapes_batch, []))
+
+        # Use 3 32 bit unsigned integers to store the board observation space
+        # 3 for the board (32x3=96 -> 15 unused bits -> 5 unused bits for each integer -> range from 0 to 2^27 = 134217728)
+
+        board_observations = []
+        n = 27
+        board = self.w.board
+        board = [board[i : i + n] for i in range(0, len(board), n)]
+        for board_slice in board:
+            board_bit_string = "".join(str(b) for b in board_slice)
+            print(board_bit_string)
+            board_observations.append(np.int32(int(board_bit_string, 2)))
+
+        state = board_observations + self.w.shapes_batch
+
+        print(state)
 
         return np.array(state, dtype=np.int32)
 

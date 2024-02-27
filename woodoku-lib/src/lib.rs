@@ -1,15 +1,17 @@
 use anyhow::{anyhow, Ok, Result};
-use rand::seq::SliceRandom;
+use rand::seq::{IteratorRandom, SliceRandom};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Shape {
+    pub id: usize,
     pub data: Vec<bool>,
     pub to_be_placed: bool,
 }
 
 impl Shape {
-    fn new(data: Vec<bool>) -> Self {
+    fn new(id: usize, data: Vec<bool>) -> Self {
         Self {
+            id,
             data,
             to_be_placed: true,
         }
@@ -275,9 +277,16 @@ impl Woodoku {
 
     fn get_new_shapes_batch() -> Vec<Shape> {
         Self::get_all_possible_shapes()
+            .iter()
+            .enumerate()
             .choose_multiple(&mut rand::thread_rng(), Self::SHAPES_BATCH_SIZE)
-            .map(|data| Shape::new((*data).clone()))
+            .into_iter()
+            .map(|(id, data)| Shape::new(id, (*data).clone()))
             .collect::<Vec<Shape>>()
+    }
+
+    pub fn get_shapes_count() -> usize {
+        Self::get_all_possible_shapes().len()
     }
 
     fn get_all_possible_shapes() -> Vec<Vec<bool>> {
@@ -375,9 +384,7 @@ mod tests {
                     to_be_placed: false,
                 },
             ];
-            w = w
-                .play_move(0, board_ix)
-                .expect("Move should be valid");
+            w = w.play_move(0, board_ix).expect("Move should be valid");
 
             if (board_ix + 1) % Woodoku::BOARD_SIDE_SIZE == 0 {
                 // If we are at the end of a row, the board should be empty
